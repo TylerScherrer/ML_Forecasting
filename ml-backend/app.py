@@ -3,12 +3,33 @@ import numpy as np
 import pickle
 from flask import Flask
 from flask_cors import CORS
+import urllib.request
+import os
+import logging
 
-# === Load model & data once here ===
-with open("model.pkl", "rb") as f:
+# === Azure Blob SAS URLs ===
+MODEL_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/model.pkl?sp=r&st=2025-04-13T22:51:19Z&se=2025-04-14T06:51:19Z&spr=https&sv=2024-11-04&sr=b&sig=bKcxNJuEQimzDfxAScUIzYu5tqUK4oMd7Z79y57868o%3D"
+FEATURES_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/features.csv?sp=r&st=2025-04-13T22:51:55Z&se=2025-04-14T06:51:55Z&spr=https&sv=2024-11-04&sr=b&sig=gUVLQw6SeFjeCXxOfQWcenlIntM8NuVUhwpNNjYaIDM%3D"
+
+# === Local Cache Paths ===
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+FEATURES_PATH = os.path.join(BASE_DIR, "features.csv")
+
+# === Download if not present ===
+if not os.path.exists(MODEL_PATH):
+    print("📦 Downloading model...")
+    urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+
+if not os.path.exists(FEATURES_PATH):
+    print("📊 Downloading features...")
+    urllib.request.urlretrieve(FEATURES_URL, FEATURES_PATH)
+
+# === Load model & data ===
+with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
 
-df = pd.read_csv("features.csv")
+df = pd.read_csv(FEATURES_PATH)
 
 # --- Ensure Actionable Features Exist ---
 if 'Profit_Margin' not in df.columns:
@@ -30,10 +51,8 @@ if 'Average_Price' not in df.columns:
     else:
         df['Average_Price'] = np.nan
 
-# Just a constant for confidence intervals, from your training logs
+# === Constants ===
 AVG_MAE = 5000
-
-# The columns your model uses
 model_features = [
     'Lag_1', 'Lag_2', 'Lag_3', 'Lag_12',
     'Month_sin', 'Month_cos',
@@ -43,8 +62,7 @@ model_features = [
     'Profit_Margin', 'Is_Promotion_Month', 'Average_Price'
 ]
 
-# Import your Blueprints
-# (Make sure you created these files inside routes/)
+# === Import Blueprints ===
 from routes.stores import stores_bp
 from routes.metrics import metrics_bp
 from routes.compare import compare_bp
@@ -53,27 +71,19 @@ from routes.seasonality import seasonality_bp
 from routes.feature_importance import feature_importance_bp
 from routes.ai_summary import ai_summary_bp
 
-import logging
-import os
-
 def create_app():
-    # Example: set up a basic logger
-    logging.basicConfig(level=logging.DEBUG,
-                        format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
-
+    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s')
     app = Flask(__name__)
     CORS(app)
 
-    # Debug: let’s see which keys we are setting
     print("[DEBUG] Setting up app config with model, df, etc.")
 
-    # Attach model/data to app config
     app.config["df"] = df
     app.config["model"] = model
     app.config["AVG_MAE"] = AVG_MAE
     app.config["model_features"] = model_features
 
-    # Register Blueprints
+    # Register routes
     app.register_blueprint(ai_summary_bp)
     app.register_blueprint(stores_bp)
     app.register_blueprint(metrics_bp)
