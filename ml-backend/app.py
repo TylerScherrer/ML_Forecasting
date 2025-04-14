@@ -95,6 +95,7 @@ def create_app():
     print("[DEBUG] Flask app created and Blueprints registered.")
     return app
 
+flask_app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))  # Azure sets PORT automatically
