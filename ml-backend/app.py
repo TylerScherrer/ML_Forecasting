@@ -8,8 +8,8 @@ import os
 import logging
 
 # === Azure Blob SAS URLs ===
-MODEL_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/model.pkl?sp=r&st=2025-04-13T22:51:19Z&se=2025-04-14T06:51:19Z&spr=https&sv=2024-11-04&sr=b&sig=bKcxNJuEQimzDfxAScUIzYu5tqUK4oMd7Z79y57868o%3D"
-FEATURES_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/features.csv?sp=r&st=2025-04-13T22:51:55Z&se=2025-04-14T06:51:55Z&spr=https&sv=2024-11-04&sr=b&sig=gUVLQw6SeFjeCXxOfQWcenlIntM8NuVUhwpNNjYaIDM%3D"
+MODEL_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/model.pkl?sp=r&st=2025-04-15T04:47:44Z&se=2025-04-15T12:47:44Z&spr=https&sv=2024-11-04&sr=b&sig=dMwL9rT7bh1HYZKJI0JD0zwoG9IRbL%2F6gYO7TybGVjQ%3D"
+FEATURES_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/features.csv?sp=r&st=2025-04-15T04:47:44Z&se=2025-04-15T12:47:44Z&spr=https&sv=2024-11-04&sr=b&sig=dMwL9rT7bh1HYZKJI0JD0zwoG9IRbL%2F6gYO7TybGVjQ%3D"
 
 # === Local Cache Paths ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -99,5 +99,4 @@ flask_app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))  # Azure sets PORT automatically
-    flask_app = create_app()
     flask_app.run(host="0.0.0.0", port=port)
