@@ -10,6 +10,6 @@ def get_stores():
             return jsonify({"error": "Missing 'Store Number'"}), 500
 
         store_ids = sorted(df["Store Number"].dropna().astype(int).unique().tolist())
-        return jsonify(store_ids)
+        return jsonify({"stores": store_ids})
     except Exception as e:
         return jsonify({"error": f"Could not fetch store IDs: {str(e)}"}), 500
