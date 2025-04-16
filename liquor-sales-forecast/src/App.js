@@ -23,7 +23,8 @@ import AiForecastSummaryCard from "./components/AiForecastSummaryCard";
 const BASE_URL =
   process.env.NODE_ENV === "development"
     ? "http://localhost:5000"
-    : "https://my-ml-forecast-app-a4akaeedhzhpfmf4.canadacentral-01.azurewebsites.net";
+    : "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
+
 
 function App() {
   const [storeList, setStoreList] = useState([]);
