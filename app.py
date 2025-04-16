@@ -94,7 +94,10 @@ app.register_blueprint(seasonality_bp)
 app.register_blueprint(feature_importance_bp)
 app.register_blueprint(ai_summary_bp)
 
-# === Start Server ===
+# === For Azure Compatibility ===
+application = app
+
+# === Start Server Locally ===
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(levelname)s: %(message)s')
     port = int(os.environ.get("PORT", 8000))
