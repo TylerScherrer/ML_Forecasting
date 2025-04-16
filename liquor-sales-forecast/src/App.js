@@ -20,10 +20,7 @@ import FeatureImportanceSummaryCard from "./components/FeatureImportanceSummaryC
 import AiForecastSummaryCard from "./components/AiForecastSummaryCard";
 
 // ✅ Auto-switch between localhost and production
-const BASE_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:5000"
-    : "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
+const BASE_URL = "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
 
 
 function App() {
