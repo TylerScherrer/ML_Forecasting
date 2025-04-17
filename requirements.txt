@@ -4,5 +4,6 @@ pandas
 numpy
 scikit-learn
 xgboost
+openai
 gunicorn
-openai==0.28.1
+
