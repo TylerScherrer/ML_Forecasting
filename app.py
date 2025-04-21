@@ -82,7 +82,9 @@ model_features = [
 
 # === Create Flask App ===
 app = Flask(__name__)
-CORS(app, origins=["https://calm-river-00759800f.6.azurestaticapps.net"])
+CORS(app, origins=[
+    "https://calm-river-00759800f.6.azurestaticapps.net"
+], methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type"])
 
 
 
