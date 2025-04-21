@@ -82,7 +82,8 @@ model_features = [
 
 # === Create Flask App ===
 app = Flask(__name__)
-CORS(app)  # ← temporarily allow all origins to confirm fix
+CORS(app, origins=["https://calm-river-00759800f.6.azurestaticapps.net"])
+
 
 
 
