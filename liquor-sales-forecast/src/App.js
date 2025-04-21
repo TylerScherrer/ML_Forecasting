@@ -176,38 +176,34 @@ export default function App() {
     }
   };
 
-  // Metrics handler
   const handleMetrics = async () => {
     setError("");
     try {
-      const res = await axios.get(`${BASE_URL}/metrics`, {
-        params: { store: selectedStore },
-      });
+      const res = await axios.get(`${BASE_URL}/metrics`);
       setMetrics(res.data);
     } catch (err) {
       console.error("Metrics API error:", err);
       setError("Error fetching model metrics.");
     }
   };
+  
 
-  // Raw Feature Importance handler
-  const handleFeatureImportance = async () => {
-    setError("");
-    try {
-      const res = await axios.get(`${BASE_URL}/feature_importance`, {
-        params: { store: selectedStore },
-      });
-      if (res.data.actionable && res.data.conceptual) {
-        setActionableData(res.data.actionable);
-        setConceptualData(res.data.conceptual);
-      } else {
-        setError("No feature importances returned.");
-      }
-    } catch (err) {
-      console.error("Feature Importance API error:", err);
-      setError("Error fetching feature importances.");
+// Raw Feature Importance handler
+const handleFeatureImportance = async () => {
+  setError("");
+  try {
+    const res = await axios.get(`${BASE_URL}/feature_importance`);
+    if (res.data.actionable && res.data.conceptual) {
+      setActionableData(res.data.actionable);
+      setConceptualData(res.data.conceptual);
+    } else {
+      setError("No feature importances returned.");
     }
-  };
+  } catch (err) {
+    console.error("Feature Importance API error:", err);
+    setError("Error fetching feature importances.");
+  }
+};
 
   return (
     <div style={{ margin: "30px", fontFamily: "Arial" }}>
