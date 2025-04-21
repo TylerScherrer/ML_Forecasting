@@ -3,8 +3,12 @@ import numpy as np
 
 compare_bp = Blueprint("compare", __name__)
 
-@compare_bp.route("/compare", methods=["POST"])
+@compare_bp.route("/compare", methods=["POST", "OPTIONS"])
 def compare():
+    if request.method == "OPTIONS":
+        # CORS preflight response
+        return jsonify({"status": "ok"}), 200
+
     data = request.get_json()
     store = int(data["store"])
     num_points = int(data.get("num_points", 6))
