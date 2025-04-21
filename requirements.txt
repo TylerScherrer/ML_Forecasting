@@ -7,3 +7,4 @@ xgboost
 openai
 gunicorn
 python-dotenv 
+3.11
