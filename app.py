@@ -27,8 +27,9 @@ import numpy as np
 logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(levelname)s: %(message)s')
 
 # === Azure Blob SAS URLs ===
-MODEL_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/model.pkl?sp=r&st=2025-04-16T00:54:37Z&se=2026-01-16T09:54:37Z&spr=https&sv=2024-11-04&sr=b&sig=…"
-FEATURES_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/features.csv?sp=r&st=2025-04-16T00:54:11Z&se=2025-12-01T09:54:11Z&spr=https&sv=2024-11-04&sr=b&sig=…"
+MODEL_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/model.pkl?sp=r&st=2025-04-16T00:54:37Z&se=2026-01-16T09:54:37Z&spr=https&sv=2024-11-04&sr=b&sig=9ui%2F6DONK0mcGhTwME0WFps93%2FytZnO%2BPsDIEIozxzQ%3D"
+FEATURES_URL = "https://mlstoragegroup.blob.core.windows.net/ml-artifacts/features.csv?sp=r&st=2025-04-16T00:54:11Z&se=2025-12-01T09:54:11Z&spr=https&sv=2024-11-04&sr=b&sig=pMhMY2AmblthZe9UxP7AEPOU5A0DsFu2VF8kcubGxoU%3D"
+
 
 # === Local Paths ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
