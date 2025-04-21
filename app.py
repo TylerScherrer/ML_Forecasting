@@ -82,7 +82,8 @@ model_features = [
 
 # === Create Flask App ===
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "https://kind-sky-0debb230f.6.azurestaticapps.net"}})
+
 
 # === App Configuration ===
 app.config["df"] = df
