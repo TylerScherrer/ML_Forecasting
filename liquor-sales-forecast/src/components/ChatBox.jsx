@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import axios from "axios";
 
 // Use same environment base URL
-const BASE_URL = process.env.REACT_APP_API_URL || "";
+const BASE_URL = "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
+
 
 export default function ChatBox({ chartData, chartType }) {
   const [messages, setMessages] = useState([]);
