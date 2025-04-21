@@ -6,4 +6,4 @@ scikit-learn
 xgboost
 openai
 gunicorn
-
+python-dotenv 

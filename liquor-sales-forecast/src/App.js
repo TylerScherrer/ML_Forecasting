@@ -1,3 +1,5 @@
+// src/App.js
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import ChatBox from "./components/ChatBox";
@@ -19,11 +21,10 @@ import SeasonalitySummaryCard from "./components/SeasonalitySummaryCard";
 import FeatureImportanceSummaryCard from "./components/FeatureImportanceSummaryCard";
 import AiForecastSummaryCard from "./components/AiForecastSummaryCard";
 
-// const BASE_URL = "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
-const BASE_URL = "http://localhost:8000";
-console.log("Forcing redeploy");
+// Use environment variable for API base URL, default to relative paths
+const BASE_URL = process.env.REACT_APP_API_URL || "";
 
-function App() {
+export default function App() {
   const [storeList, setStoreList] = useState([]);
   const [selectedStore, setSelectedStore] = useState("");
   const [weeks, setWeeks] = useState(4);
@@ -45,7 +46,7 @@ function App() {
   const [aiForecastSummary, setAiForecastSummary] = useState("");
   const [aiFeatureImportanceSummary, setAiFeatureImportanceSummary] = useState("");
 
-  // load stores
+  // Load store IDs on mount
   useEffect(() => {
     axios
       .get(`${BASE_URL}/stores`)
@@ -53,22 +54,18 @@ function App() {
       .catch(() => setError("Could not load store IDs"));
   }, []);
 
-  // --- Forecast + AI summary ---
+  // Forecast + AI Summary
   const handleForecast = async () => {
     if (!selectedStore) {
       setError("Select a store first!");
       return;
     }
     setError("");
-    setAiForecastSummary("");  // clear old summary
+    setAiForecastSummary("");
 
-    // 1) GET predictions
     let chartData = [];
     try {
-      const res = await axios.post(`${BASE_URL}/predict`, {
-        store: selectedStore,
-        weeks,
-      });
+      const res = await axios.post(`${BASE_URL}/predict`, { store: selectedStore, weeks });
       if (!res.data.prediction) {
         setForecastData([]);
         setError(res.data.error || "Prediction failed.");
@@ -87,11 +84,11 @@ function App() {
       return;
     }
 
-    // 2) AI summary (own try/catch & trailing slash!)
+    // AI summary
     const totalPredicted = chartData.reduce((sum, cur) => sum + cur.predicted, 0);
     const confidence_low = Math.min(...chartData.map((c) => c.lower));
     const confidence_high = Math.max(...chartData.map((c) => c.upper));
-    const aiPayload = {
+    const payload = {
       forecastSummary: {
         totalPredicted: Math.round(totalPredicted),
         weeks: chartData.length,
@@ -101,7 +98,7 @@ function App() {
     };
 
     try {
-      const aiRes = await axios.post(`${BASE_URL}/ai-summary/`, aiPayload);
+      const aiRes = await axios.post(`${BASE_URL}/ai-summary/`, payload);
       setAiForecastSummary(aiRes.data.summary || "AI summary unavailable");
     } catch (err) {
       console.error("AI summary API error:", err);
@@ -109,11 +106,13 @@ function App() {
     }
   };
 
-  // --- Feature Importance AI summary ---
+  // Feature Importance AI summary
   const handleAiFeatureImportance = async () => {
     try {
-      const payload = { actionable: actionableData, conceptual: conceptualData };
-      const res = await axios.post(`${BASE_URL}/ai_feature_importance/`, payload);
+      const res = await axios.post(`${BASE_URL}/ai_feature_importance/`, {
+        actionable: actionableData,
+        conceptual: conceptualData,
+      });
       if (res.data.summary) {
         setAiFeatureImportanceSummary(res.data.summary);
         setError("");
@@ -126,7 +125,7 @@ function App() {
     }
   };
 
-  // --- Compare, Seasonality, Metrics & raw Feature Importance handlers ---
+  // Compare handler
   const handleCompare = async () => {
     if (!selectedStore) {
       setError("Select a store first!");
@@ -156,6 +155,7 @@ function App() {
     }
   };
 
+  // Seasonality handler
   const handleSeasonality = async () => {
     setError("");
     try {
@@ -174,6 +174,7 @@ function App() {
     }
   };
 
+  // Metrics handler
   const handleMetrics = async () => {
     setError("");
     try {
@@ -187,6 +188,7 @@ function App() {
     }
   };
 
+  // Raw Feature Importance handler
   const handleFeatureImportance = async () => {
     setError("");
     try {
@@ -210,14 +212,7 @@ function App() {
       <h1>Liquor Sales Forecast</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <div
-        style={{
-          display: "flex",
-          gap: "20px",
-          marginBottom: "20px",
-          alignItems: "center",
-        }}
-      >
+      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
         <StoreSelector
           storeList={storeList}
           selectedStore={selectedStore}
@@ -249,10 +244,7 @@ function App() {
       {showForecast && forecastData.length > 0 && (
         <section style={{ marginTop: "20px" }}>
           <h2>Forecast (Next {weeks} weeks)</h2>
-          <ForecastSummaryCard
-            selectedStore={selectedStore}
-            forecastData={forecastData}
-          />
+          <ForecastSummaryCard selectedStore={selectedStore} forecastData={forecastData} />
           <ChatBox chartData={forecastData} chartType="forecast" />
           <AiForecastSummaryCard aiText={aiForecastSummary} />
           <ForecastChart data={forecastData} />
@@ -275,54 +267,43 @@ function App() {
         </section>
       )}
 
-      {showFeatureImportance &&
-        (actionableData.length > 0 || conceptualData.length > 0) && (
-          <section style={{ marginTop: "20px" }}>
-            <h2>Feature Importances</h2>
-            <button
-              onClick={handleAiFeatureImportance}
-              style={{ marginBottom: "10px" }}
+      {showFeatureImportance && (actionableData.length > 0 || conceptualData.length > 0) && (
+        <section style={{ marginTop: "20px" }}>
+          <h2>Feature Importances</h2>
+          <button onClick={handleAiFeatureImportance} style={{ marginBottom: "10px" }}>
+            {aiFeatureImportanceSummary ? "Refresh AI Summary" : "Generate AI Summary"}
+          </button>
+          {aiFeatureImportanceSummary && (
+            <div
+              style={{
+                border: "1px solid #ccc",
+                backgroundColor: "#f1f1f1",
+                padding: "10px",
+                marginBottom: "10px",
+                borderRadius: "4px",
+              }}
             >
-              {aiFeatureImportanceSummary
-                ? "Refresh AI Summary"
-                : "Generate AI Summary"}
-            </button>
-
-            {aiFeatureImportanceSummary && (
-              <div
-                style={{
-                  border: "1px solid #ccc",
-                  backgroundColor: "#f1f1f1",
-                  padding: "10px",
-                  marginBottom: "10px",
-                  borderRadius: "4px",
-                }}
-              >
-                <strong>AI-Generated Feature Importance Summary</strong>
-                <p>{aiFeatureImportanceSummary}</p>
+              <strong>AI-Generated Feature Importance Summary</strong>
+              <p>{aiFeatureImportanceSummary}</p>
+            </div>
+          )}
+          <FeatureImportanceSummaryCard actionableData={actionableData} conceptualData={conceptualData} />
+          <div style={{ display: "flex", gap: "40px" }}>
+            {actionableData.length > 0 && (
+              <div style={{ flex: 1 }}>
+                <h3>Actionable Factors</h3>
+                <FeatureImportanceChart data={actionableData} />
               </div>
             )}
-
-            <FeatureImportanceSummaryCard
-              actionableData={actionableData}
-              conceptualData={conceptualData}
-            />
-            <div style={{ display: "flex", gap: "40px" }}>
-              {actionableData.length > 0 && (
-                <div style={{ flex: 1 }}>
-                  <h3>Actionable Factors</h3>
-                  <FeatureImportanceChart data={actionableData} />
-                </div>
-              )}
-              {conceptualData.length > 0 && (
-                <div style={{ flex: 1 }}>
-                  <h3>Conceptual Factors</h3>
-                  <FeatureImportanceChart data={conceptualData} />
-                </div>
-              )}
-            </div>
-          </section>
-        )}
+            {conceptualData.length > 0 && (
+              <div style={{ flex: 1 }}>
+                <h3>Conceptual Factors</h3>
+                <FeatureImportanceChart data={conceptualData} />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {showMetrics && metrics && (
         <section style={{ marginTop: "20px" }}>
@@ -334,5 +315,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

@@ -1,35 +1,34 @@
+// src/components/ChatBox.jsx
 import React, { useState } from "react";
 import axios from "axios";
 
-// const BASE_URL = "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
-const BASE_URL = "http://localhost:8000";
+// Use same environment base URL
+const BASE_URL = process.env.REACT_APP_API_URL || "";
+
 export default function ChatBox({ chartData, chartType }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
   const send = async () => {
     if (!input.trim()) return;
-    console.log("🛰️ Sending chat question:", input, chartType, chartData);  // A
-  
+    console.log("🛰️ Sending chat question:", input, chartType, chartData);
     try {
       const { data } = await axios.post(`${BASE_URL}/api/chat`, {
         question: input,
         chartType,
         chartData,
       });
-      console.log("🛰️ /api/chat response:", data);  // B
-  
+      console.log("🛰️ /api/chat response:", data);
       if (data.reply) {
         setMessages((m) => [...m, { sender: "ai", text: data.reply }]);
       } else if (data.error) {
         console.error("⚠️ /api/chat returned error:", data.error);
       }
     } catch (e) {
-      console.error("❌ Error talking to AI:", e);     // C
+      console.error("❌ Error talking to AI:", e);
       setMessages((m) => [...m, { sender: "ai", text: "🤖 Error talking to AI" }]);
     }
   };
-  
 
   return (
     <div style={{ border: "1px solid #ccc", padding: 10, borderRadius: 4 }}>
