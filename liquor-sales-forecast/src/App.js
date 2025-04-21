@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-
+import ChatBox from "./components/ChatBox";
 // Reusable sub-components
 import StoreSelector from "./components/StoreSelector";
 import WeeksInput from "./components/WeeksInput";
@@ -19,9 +19,8 @@ import SeasonalitySummaryCard from "./components/SeasonalitySummaryCard";
 import FeatureImportanceSummaryCard from "./components/FeatureImportanceSummaryCard";
 import AiForecastSummaryCard from "./components/AiForecastSummaryCard";
 
-
-const BASE_URL = "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
-
+// const BASE_URL = "https://ml-forecast-api-bpa9g0hscaccc0e0.canadacentral-01.azurewebsites.net";
+const BASE_URL = "http://localhost:8000";
 console.log("Forcing redeploy");
 
 function App() {
@@ -46,66 +45,75 @@ function App() {
   const [aiForecastSummary, setAiForecastSummary] = useState("");
   const [aiFeatureImportanceSummary, setAiFeatureImportanceSummary] = useState("");
 
+  // load stores
   useEffect(() => {
     axios
       .get(`${BASE_URL}/stores`)
-      .then((res) => setStoreList(res.data.stores))
+      .then((res) => setStoreList(res.data.stores || res.data))
       .catch(() => setError("Could not load store IDs"));
   }, []);
 
+  // --- Forecast + AI summary ---
   const handleForecast = async () => {
-    if (!selectedStore) return setError("Select a store first!");
+    if (!selectedStore) {
+      setError("Select a store first!");
+      return;
+    }
+    setError("");
+    setAiForecastSummary("");  // clear old summary
 
+    // 1) GET predictions
+    let chartData = [];
     try {
       const res = await axios.post(`${BASE_URL}/predict`, {
         store: selectedStore,
-        weeks: weeks,
+        weeks,
       });
-
-      if (res.data.prediction) {
-        const chartData = res.data.prediction.map((val, idx) => ({
-          week: idx + 1,
-          predicted: parseFloat(val.predicted.toFixed(2)),
-          upper: parseFloat(val.upper.toFixed(2)),
-          lower: parseFloat(val.lower.toFixed(2)),
-        }));
-        setForecastData(chartData);
-        setError("");
-
-        const totalPredicted = chartData.reduce((acc, cur) => acc + cur.predicted, 0);
-        const confidence_low = Math.min(...chartData.map((c) => c.lower));
-        const confidence_high = Math.max(...chartData.map((c) => c.upper));
-
-        const aiPayload = {
-          store: selectedStore,
-          forecastSummary: {
-            totalPredicted: Math.round(totalPredicted),
-            weeks: chartData.length,
-            confidence_low: Math.round(confidence_low),
-            confidence_high: Math.round(confidence_high),
-          },
-        };
-
-        const aiRes = await axios.post(`${BASE_URL}/ai_summary`, aiPayload);
-        if (aiRes.data.summary) {
-          setAiForecastSummary(aiRes.data.summary);
-        }
-      } else {
+      if (!res.data.prediction) {
         setForecastData([]);
         setError(res.data.error || "Prediction failed.");
+        return;
       }
+      chartData = res.data.prediction.map((val, idx) => ({
+        week: idx + 1,
+        predicted: parseFloat(val.predicted.toFixed(2)),
+        upper: parseFloat(val.upper.toFixed(2)),
+        lower: parseFloat(val.lower.toFixed(2)),
+      }));
+      setForecastData(chartData);
     } catch (err) {
+      console.error("Predict API error:", err);
       setError("Error connecting to backend for forecast.");
+      return;
+    }
+
+    // 2) AI summary (own try/catch & trailing slash!)
+    const totalPredicted = chartData.reduce((sum, cur) => sum + cur.predicted, 0);
+    const confidence_low = Math.min(...chartData.map((c) => c.lower));
+    const confidence_high = Math.max(...chartData.map((c) => c.upper));
+    const aiPayload = {
+      forecastSummary: {
+        totalPredicted: Math.round(totalPredicted),
+        weeks: chartData.length,
+        confidence_low: Math.round(confidence_low),
+        confidence_high: Math.round(confidence_high),
+      },
+    };
+
+    try {
+      const aiRes = await axios.post(`${BASE_URL}/ai-summary/`, aiPayload);
+      setAiForecastSummary(aiRes.data.summary || "AI summary unavailable");
+    } catch (err) {
+      console.error("AI summary API error:", err);
+      setAiForecastSummary("AI summary unavailable");
     }
   };
 
+  // --- Feature Importance AI summary ---
   const handleAiFeatureImportance = async () => {
     try {
-      const payload = {
-        actionable: actionableData,
-        conceptual: conceptualData,
-      };
-      const res = await axios.post(`${BASE_URL}/ai_feature_importance`, payload);
+      const payload = { actionable: actionableData, conceptual: conceptualData };
+      const res = await axios.post(`${BASE_URL}/ai_feature_importance/`, payload);
       if (res.data.summary) {
         setAiFeatureImportanceSummary(res.data.summary);
         setError("");
@@ -113,70 +121,86 @@ function App() {
         setError("No summary returned from AI feature importance endpoint.");
       }
     } catch (err) {
+      console.error("AI feature importance API error:", err);
       setError("Error fetching AI feature importance summary.");
     }
   };
 
+  // --- Compare, Seasonality, Metrics & raw Feature Importance handlers ---
   const handleCompare = async () => {
-    if (!selectedStore) return setError("Select a store first!");
+    if (!selectedStore) {
+      setError("Select a store first!");
+      return;
+    }
+    setError("");
     try {
       const res = await axios.post(`${BASE_URL}/compare`, {
         store: selectedStore,
         num_points: 6,
       });
-      if (res.data.data) {
-        const compareVals = res.data.data.map((d) => ({
-          monthLabel: `${d.year}-${String(d.month).padStart(2, "0")}`,
-          actual: d.actual,
-          predicted: d.predicted,
-        }));
-        setCompareData(compareVals);
-        setError("");
-      } else {
+      if (!res.data.data) {
         setCompareData([]);
         setError("Compare request failed.");
+      } else {
+        setCompareData(
+          res.data.data.map((d) => ({
+            monthLabel: `${d.year}-${String(d.month).padStart(2, "0")}`,
+            actual: d.actual,
+            predicted: d.predicted,
+          }))
+        );
       }
     } catch (err) {
+      console.error("Compare API error:", err);
       setError("Error connecting to backend for compare.");
     }
   };
 
   const handleSeasonality = async () => {
+    setError("");
     try {
-      const res = await axios.get(`${BASE_URL}/analysis/seasonality`);
-      if (res.data.seasonality) {
-        setSeasonalityData(res.data.seasonality);
-        setError("");
-      } else {
+      const res = await axios.get(`${BASE_URL}/analysis/seasonality`, {
+        params: { store: selectedStore },
+      });
+      if (!res.data.seasonality) {
         setSeasonalityData([]);
         setError("Seasonality request failed.");
+      } else {
+        setSeasonalityData(res.data.seasonality);
       }
     } catch (err) {
+      console.error("Seasonality API error:", err);
       setError("Error connecting to backend for seasonality.");
     }
   };
 
   const handleMetrics = async () => {
+    setError("");
     try {
-      const res = await axios.get(`${BASE_URL}/metrics`);
+      const res = await axios.get(`${BASE_URL}/metrics`, {
+        params: { store: selectedStore },
+      });
       setMetrics(res.data);
-      setError("");
     } catch (err) {
+      console.error("Metrics API error:", err);
       setError("Error fetching model metrics.");
     }
   };
 
   const handleFeatureImportance = async () => {
+    setError("");
     try {
-      const res = await axios.get(`${BASE_URL}/feature_importance`);
+      const res = await axios.get(`${BASE_URL}/feature_importance`, {
+        params: { store: selectedStore },
+      });
       if (res.data.actionable && res.data.conceptual) {
         setActionableData(res.data.actionable);
         setConceptualData(res.data.conceptual);
-        setError("");
       } else {
         setError("No feature importances returned.");
       }
     } catch (err) {
+      console.error("Feature Importance API error:", err);
       setError("Error fetching feature importances.");
     }
   };
@@ -186,7 +210,14 @@ function App() {
       <h1>Liquor Sales Forecast</h1>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <div style={{ display: "flex", gap: "20px", marginBottom: "20px", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          marginBottom: "20px",
+          alignItems: "center",
+        }}
+      >
         <StoreSelector
           storeList={storeList}
           selectedStore={selectedStore}
@@ -216,75 +247,89 @@ function App() {
       <hr />
 
       {showForecast && forecastData.length > 0 && (
-        <div style={{ marginTop: "20px" }}>
+        <section style={{ marginTop: "20px" }}>
           <h2>Forecast (Next {weeks} weeks)</h2>
-          <ForecastSummaryCard selectedStore={selectedStore} forecastData={forecastData} />
+          <ForecastSummaryCard
+            selectedStore={selectedStore}
+            forecastData={forecastData}
+          />
+          <ChatBox chartData={forecastData} chartType="forecast" />
           <AiForecastSummaryCard aiText={aiForecastSummary} />
           <ForecastChart data={forecastData} />
-        </div>
+        </section>
       )}
 
       {showCompare && compareData.length > 0 && (
-        <div style={{ marginTop: "20px" }}>
-          <h2>Historic Compare (Last 6 weeks)</h2>
+        <section style={{ marginTop: "20px" }}>
+          <h2>Historic Compare (Last 6 periods)</h2>
           <CompareSummaryCard compareData={compareData} />
           <CompareChart data={compareData} />
-        </div>
+        </section>
       )}
 
       {showSeasonality && seasonalityData.length > 0 && (
-        <div style={{ marginTop: "20px" }}>
+        <section style={{ marginTop: "20px" }}>
           <h2>Seasonality Analysis</h2>
           <SeasonalitySummaryCard seasonalityData={seasonalityData} />
           <SeasonalityChart data={seasonalityData} />
-        </div>
+        </section>
       )}
 
-      {showFeatureImportance && (actionableData.length > 0 || conceptualData.length > 0) && (
-        <div style={{ marginTop: "20px" }}>
-          <h2>Model Feature Importances</h2>
-          <button onClick={handleAiFeatureImportance} style={{ marginBottom: "10px" }}>
-            {aiFeatureImportanceSummary ? "Refresh AI Summary" : "Generate AI Summary"}
-          </button>
-          {aiFeatureImportanceSummary && (
-            <div style={{
-              border: "1px solid #ccc",
-              backgroundColor: "#f1f1f1",
-              padding: "10px",
-              marginBottom: "10px",
-              borderRadius: "4px"
-            }}>
-              <strong>AI-Generated Feature Importance Summary</strong>
-              <p>{aiFeatureImportanceSummary}</p>
+      {showFeatureImportance &&
+        (actionableData.length > 0 || conceptualData.length > 0) && (
+          <section style={{ marginTop: "20px" }}>
+            <h2>Feature Importances</h2>
+            <button
+              onClick={handleAiFeatureImportance}
+              style={{ marginBottom: "10px" }}
+            >
+              {aiFeatureImportanceSummary
+                ? "Refresh AI Summary"
+                : "Generate AI Summary"}
+            </button>
+
+            {aiFeatureImportanceSummary && (
+              <div
+                style={{
+                  border: "1px solid #ccc",
+                  backgroundColor: "#f1f1f1",
+                  padding: "10px",
+                  marginBottom: "10px",
+                  borderRadius: "4px",
+                }}
+              >
+                <strong>AI-Generated Feature Importance Summary</strong>
+                <p>{aiFeatureImportanceSummary}</p>
+              </div>
+            )}
+
+            <FeatureImportanceSummaryCard
+              actionableData={actionableData}
+              conceptualData={conceptualData}
+            />
+            <div style={{ display: "flex", gap: "40px" }}>
+              {actionableData.length > 0 && (
+                <div style={{ flex: 1 }}>
+                  <h3>Actionable Factors</h3>
+                  <FeatureImportanceChart data={actionableData} />
+                </div>
+              )}
+              {conceptualData.length > 0 && (
+                <div style={{ flex: 1 }}>
+                  <h3>Conceptual Factors</h3>
+                  <FeatureImportanceChart data={conceptualData} />
+                </div>
+              )}
             </div>
-          )}
-          <FeatureImportanceSummaryCard
-            actionableData={actionableData}
-            conceptualData={conceptualData}
-          />
-          <div style={{ display: "flex", gap: "40px" }}>
-            {actionableData.length > 0 && (
-              <div style={{ flex: 1 }}>
-                <h3>Actionable Factors</h3>
-                <FeatureImportanceChart data={actionableData} />
-              </div>
-            )}
-            {conceptualData.length > 0 && (
-              <div style={{ flex: 1 }}>
-                <h3>Conceptual Factors</h3>
-                <FeatureImportanceChart data={conceptualData} />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          </section>
+        )}
 
       {showMetrics && metrics && (
-        <div style={{ marginTop: "20px" }}>
+        <section style={{ marginTop: "20px" }}>
           <h2>Model Performance Metrics</h2>
           <p>MAE: {metrics.MAE}</p>
           <p>RMSE: {metrics.RMSE}</p>
-        </div>
+        </section>
       )}
     </div>
   );

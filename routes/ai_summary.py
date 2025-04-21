@@ -1,72 +1,62 @@
+# routes/ai_summary.py
 import os
-import openai
-import json
-from flask import Blueprint, request, jsonify, current_app
 import logging
+from flask import Blueprint, request, jsonify
+import openai
+from dotenv import load_dotenv
 
-# Use the standard logging module
+# Load environment variables first
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
+else:
+    load_dotenv()
+
+# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
 ai_summary_bp = Blueprint("ai_summary", __name__)
 
-# IMPORTANT: Use a proper environment variable name for your key.
-# Do NOT pass the key as the name to os.getenv; use something like "OPENAI_API_KEY"
-openai_key = os.getenv("OPENAI_API_KEY")
-logging.debug(f"OPENAI_API_KEY (partial): {openai_key[:6] + '...' + openai_key[-4:] if openai_key else 'None'}")
-openai.api_key = openai_key
+# Read API key
+oai_key = os.getenv("OPENAI_API_KEY")
+if not oai_key:
+    logging.error("OPENAI_API_KEY is not set!")
+else:
+    openai.api_key = oai_key
 
-@ai_summary_bp.route("/ai_summary", methods=["POST"])
-def ai_summary():
+@ai_summary_bp.route("", methods=["POST"], strict_slashes=False)
+def generate_forecast_summary():
     """
-    Expects JSON like:
-    {
-      "store": 123,
-      "forecastSummary": {
-        "totalPredicted": 816784,
-        "weeks": 4,
-        "confidence_low": 185380,
-        "confidence_high": 195380
-      }
-    }
-    Returns a JSON with a "summary" key containing the generated text.
+    POST /ai-summary
+    Expects JSON: {"forecastSummary": {...}}
+    Returns: {"summary": "..."}
     """
-    logging.debug("'/ai_summary' endpoint hit")
-    
-    data = request.get_json()
-    logging.debug(f"Received payload: {data}")
-    
-    if not data or "forecastSummary" not in data:
-        logging.debug("Missing forecastSummary in payload")
-        return jsonify({"error": "Missing forecastSummary data"}), 400
+    logging.debug("[ai_summary] endpoint hit")
+    data = request.get_json(silent=True) or {}
+    logging.debug("[ai_summary] payload: %s", data)
 
-    store_id = data["store"]
-    forecast = data["forecastSummary"]
-    logging.debug(f"Forecast details: {forecast}")
+    forecast = data.get("forecastSummary")
+    if not forecast:
+        return jsonify({"error": "missing forecastSummary"}), 400
 
-    # Construct a prompt for GPT using a dynamic summary
     prompt = (
-        f"You are a data assistant. We have an ML forecast for store #{store_id}. "
-        f"The total predicted sales over the next {forecast['weeks']} weeks is about "
-        f"${forecast['totalPredicted']:,}. The 95% confidence range is from "
-        f"${forecast['confidence_low']:,} to ${forecast['confidence_high']:,}. "
-        "Summarize findings from what you can see from the Graph. Help explain the data analysis to someone like they have no prior knowledge"
+        f"Summarize this sales forecast for presentation:\n"
+        f"- Total sales: ${forecast['totalPredicted']} over {forecast['weeks']} weeks.\n"
+        f"- 95% confidence range: ${forecast['confidence_low']} – ${forecast['confidence_high']}."
     )
-    logging.debug(f"Constructed prompt: {prompt}")
+    logging.debug("[ai_summary] prompt: %s", prompt)
 
     try:
-        # Use the new API interface for ChatCompletion
-        response = openai.ChatCompletion.create(
+        # Updated for openai>=1.0.0
+        resp = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100,
-            temperature=0.7
+            temperature=0.7,
+            max_tokens=150,
         )
-        logging.debug(f"Raw OpenAI response: {response}")
-        
-        summary = response["choices"][0]["message"]["content"]
-        logging.debug(f"Extracted summary: {summary}")
+        logging.debug("[ai_summary] raw resp: %s", resp)
+        summary = resp.choices[0].message.content.strip()
         return jsonify({"summary": summary})
-    except Exception as e:
-        # Using standard logging.exception to log the full traceback
-        logging.exception("Exception in /ai_summary endpoint")
-        return jsonify({"error": str(e)}), 500
+    except Exception as ex:
+        logging.exception("AI summary error")
+        return jsonify({"error": "OpenAI API error"}), 500

@@ -2,7 +2,8 @@ from flask import Blueprint, jsonify, current_app
 
 stores_bp = Blueprint("stores", __name__)
 
-@stores_bp.route("/stores", methods=["GET"])
+@stores_bp.route("/", methods=["GET"])
+
 def get_stores():
     try:
         df = current_app.config["df"]
