@@ -3,7 +3,7 @@ import pandas as pd
 
 seasonality_bp = Blueprint("seasonality", __name__)
 
-@seasonality_bp.route("/analysis/seasonality", methods=["GET", "OPTIONS"])
+@seasonality_bp.route("/seasonality", methods=["GET", "OPTIONS"])
 def seasonality_analysis():
     if request.method == "OPTIONS":
         response = make_response()
