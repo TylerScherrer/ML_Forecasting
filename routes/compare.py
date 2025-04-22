@@ -5,6 +5,14 @@ compare_bp = Blueprint("compare", __name__)
 
 @compare_bp.route("", methods=["POST", "OPTIONS"])
 def compare():
+    if request.method == "OPTIONS":
+        from flask import make_response
+        response = make_response()
+        response.headers["Access-Control-Allow-Origin"] = "https://calm-river-00759800f.6.azurestaticapps.net"
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response, 200
+
     data = request.get_json()
     store = int(data["store"])
     num_points = int(data.get("num_points", 6))
