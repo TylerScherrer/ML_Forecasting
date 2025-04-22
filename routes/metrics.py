@@ -4,7 +4,7 @@ import math
 
 metrics_bp = Blueprint("metrics", __name__)
 
-@metrics_bp.route("/metrics", methods=["GET", "OPTIONS"])
+@metrics_bp.route("", methods=["GET", "OPTIONS"])
 def get_metrics():
     if request.method == "OPTIONS":
         response = make_response()
