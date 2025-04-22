@@ -3,7 +3,7 @@ import pandas as pd
 
 feature_importance_bp = Blueprint("feature_importance", __name__)
 
-@feature_importance_bp.route("/feature_importance", methods=["GET", "OPTIONS"])
+@feature_importance_bp.route("", methods=["GET", "OPTIONS"])
 def get_feature_importance():
     if request.method == "OPTIONS":
         response = make_response()
