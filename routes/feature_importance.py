@@ -1,15 +1,17 @@
-from flask import Blueprint, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, make_response
 import pandas as pd
 
 feature_importance_bp = Blueprint("feature_importance", __name__)
 
-@feature_importance_bp.route("/feature_importance", methods=["GET"])
+@feature_importance_bp.route("/feature_importance", methods=["GET", "OPTIONS"])
 def get_feature_importance():
-    """
-    GET /feature_importance
-    Returns feature importances from the loaded model,
-    split into actionable vs. conceptual factors.
-    """
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers["Access-Control-Allow-Origin"] = "https://calm-river-00759800f.6.azurestaticapps.net"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response, 200
+
     model = current_app.config["model"]
     model_features = current_app.config["model_features"]
 
@@ -25,7 +27,6 @@ def get_feature_importance():
         "importance": importances
     }).sort_values(by="importance", ascending=False)
 
-    # Manager-controllable features
     actionable_features = {"Profit_Margin", "Is_Promotion_Month", "Average_Price"}
     df_actionable = df_imp[df_imp["feature"].isin(actionable_features)]
     df_conceptual = df_imp[~df_imp["feature"].isin(actionable_features)]

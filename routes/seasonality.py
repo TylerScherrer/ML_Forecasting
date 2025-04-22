@@ -1,15 +1,17 @@
-from flask import Blueprint, request, jsonify, current_app
-import pandas as pd  # may be needed for pd.isna
+from flask import Blueprint, request, jsonify, current_app, make_response
+import pandas as pd
 
 seasonality_bp = Blueprint("seasonality", __name__)
 
-@seasonality_bp.route("/analysis/seasonality", methods=["GET"])
+@seasonality_bp.route("/analysis/seasonality", methods=["GET", "OPTIONS"])
 def seasonality_analysis():
-    """
-    GET /analysis/seasonality
-    Optional query param ?store=<store_id>
-    Returns monthly average (and std) of Total_Sales.
-    """
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers["Access-Control-Allow-Origin"] = "https://calm-river-00759800f.6.azurestaticapps.net"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response, 200
+
     store_param = request.args.get("store", None)
 
     df = current_app.config["df"]

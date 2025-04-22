@@ -1,11 +1,18 @@
-from flask import Blueprint, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, make_response
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import math
 
 metrics_bp = Blueprint("metrics", __name__)
 
-@metrics_bp.route("/metrics", methods=["GET"])
+@metrics_bp.route("/metrics", methods=["GET", "OPTIONS"])
 def get_metrics():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers["Access-Control-Allow-Origin"] = "https://calm-river-00759800f.6.azurestaticapps.net"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response, 200
+
     df = current_app.config["df"]
     model = current_app.config["model"]
     model_features = current_app.config["model_features"]
